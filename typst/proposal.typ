@@ -10,15 +10,13 @@
   *Kurs:* Termodynamik *1FA517* \
 ]
 
-
-
-= Instruktioner
-
-En proposal ska innehålla:
-
-- En beskrivning av vilka storheter ni vill mäta och om ni vill mäta med eller utan vattenflöde
-
-- En hypotes kring vilka [kvalitativa] resultat ni förväntar er med en [kort] förklaring
+// = Instruktioner
+//
+// En proposal ska innehålla:
+//
+// - En beskrivning av vilka storheter ni vill mäta och om ni vill mäta med eller utan vattenflöde
+//
+// - En hypotes kring vilka [kvalitativa] resultat ni förväntar er med en [kort] förklaring
 
 #align(center, [= Förslag])
 
