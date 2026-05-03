@@ -31,9 +31,9 @@ $ C O P_C = dot(Q)_C / P_(#text([pump])) $
 
 Vi använder två behållare med en känd mängd vatten ($m_H, m_C$) och mäter följande storheter som funktion av tid:
 
-1. Temperaturer $T_H(t)$ och $T_C(t)$.
-2. Elektrisk effekt till kompressorn $P(t)$.
-3. Kylmediets fas i olika delar av cykeln.
++ Temperaturer $T_H(t)$ och $T_C(t)$.
++ Elektrisk effekt till kompressorn $P(t)$.
++ Kylmediets fas i olika delar av cykeln.
 
 Inget vattenflöde används, vilket förenklar beräkningen av den totala energin i systemet.
 
