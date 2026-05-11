@@ -145,7 +145,7 @@ def main():
         plt.tight_layout()
 
         filename = f"temperature_{name.lower().replace(' ', '')}.png"
-        plt.savefig(filename, dpi=300)
+        plt.savefig(f"../images/{filename}", dpi=300)
         plt.close()
         print(f"Plot saved to {filename}")
 
@@ -176,7 +176,7 @@ def main():
     plt.ylim(0, 15)
     plt.legend()
     plt.tight_layout()
-    plt.savefig("cop_analysis.png", dpi=300)
+    plt.savefig("../images/cop_analysis.png", dpi=300)
     plt.close()
     print("COP analysis saved to cop_analysis.png")
 
