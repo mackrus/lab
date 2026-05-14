@@ -1,5 +1,5 @@
-from pathlib import Path
 import argparse
+from pathlib import Path
 
 import cv2
 import numpy as np
@@ -117,8 +117,12 @@ def _default_output_for_video(video_path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Extract power values from a BW ROI video using OCR.")
-    parser.add_argument("video", nargs="?", default="run1_BW.mov", help="Path to input video.")
+    parser = argparse.ArgumentParser(
+        description="Extract power values from a BW ROI video using OCR."
+    )
+    parser.add_argument(
+        "video", nargs="?", default="run1_BW.mov", help="Path to input video."
+    )
     parser.add_argument(
         "-o",
         "--output",
