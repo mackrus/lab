@@ -1,4 +1,5 @@
 import numpy as np
+
 from plot_data import load_lab_csv
 
 
@@ -60,7 +61,7 @@ def main():
     data_run_1 = load_lab_csv("../data/run_1_8_may.csv")
 
     # Masses from previous analysis
-    g = 9.81
+    g = 9.82  # Uppsala constant
     m_h = 32.25 / g
     m_c = 26.55 / g
 

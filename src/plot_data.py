@@ -96,9 +96,9 @@ def main():
     raw_run_3_force = load_lab_csv("../data/run_2_8_may.csv", run_name="Run #3")
     m_c = np.nanmean(raw_run_3_force[:, 8]) / g
 
-    # Define color palettes
-    hot_colors = sns.color_palette("Reds", 3)
-    cold_colors = sns.color_palette("Blues", 3)
+    # Define color palettes (generate 4, drop the lightest, then reverse so index 0 is darkest)
+    hot_colors = sns.color_palette("Reds", 4)[1:][::-1]
+    cold_colors = sns.color_palette("Blues", 4)[1:][::-1]
 
     # 1. Temperature Plots (Individual Files)
     runs = [
@@ -124,18 +124,30 @@ def main():
     for data, name in runs:
         plt.figure(figsize=(12, 7))
         t = data[:, 0]
+        line_styles = ["-", "--", ":"]
+        line_alphas = [1.0, 0.8, 0.8]
+
         # Hot channels (1-3)
         for i in range(3):
-            plt.plot(t, data[:, i + 1], label=hot_labels[i], color=hot_colors[-i], lw=2)
+            plt.plot(
+                t,
+                data[:, i + 1],
+                label=hot_labels[i],
+                color=hot_colors[i],
+                lw=2,
+                linestyle=line_styles[i],
+                alpha=line_alphas[i],
+            )
         # Cold channels (4-6)
         for i in range(3):
             plt.plot(
                 t,
                 data[:, i + 4],
                 label=cold_labels[i],
-                color=cold_colors[-i],
+                color=cold_colors[i],
                 lw=2,
-                linestyle="--",
+                linestyle=line_styles[i],
+                alpha=line_alphas[i],
             )
 
         plt.title(f"{name}: Temperature Evolution", pad=20)
