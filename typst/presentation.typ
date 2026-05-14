@@ -9,43 +9,82 @@
 
 = Introduktion
 
-I den här laborationen undersöker vi effektiviteten hos en värmepump genom att studera värmeöverföring mellan två slutna vattenbehållare.
-
-- Experiment utan vattenflöde (stillastående vatten).
-- Beräkning av värmeeffekt via temperaturförändring.
-- Analys av värmefaktorns ($C O P$) beroende av temperaturskillnad.
+- Undersökning av värmepumpens effektivitet.
+- Fokus på värmeöverföring mellan slutna behållare.
+- Experiment utan vattenflöde ($dot m = 0$).
+- Mål: $C O P$ som funktion av $Delta T$.
 
 == Teori
 
-Värmeeffekten som avges till den varma behållaren ($dot Q_H$) och tas upp från den kalla ($dot Q_C$) beräknas ur vattnets temperaturförändring:
+Beräkning av värmeeffekt:
+$ dot(Q)_H = m_H c_p dot(T)_H quad #text("och") quad dot(Q)_C = -m_C c_p dot(T)_C $
 
-$ dot(Q)_H = m_H c_p dot(T)_H $
-$ dot(Q)_C = -m_C c_p dot(T)_C $
-
-Värmefaktorn ($C O P_H$) och kylfaktorn ($C O P_C$) definieras som:
-
-$ C O P_H = dot(Q)_H / P_(#text([pump])) $
-$ C O P_C = dot(Q)_C / P_(#text([pump])) $
+Värmefaktor ($C O P$):
+$ C O P_H = dot(Q)_H / P_text("el") quad #text("och") quad C O P_C = dot(Q)_C / P_text("el") $
 
 == Metod
 
-Vi använder två behållare med en känd mängd vatten ($m_H, m_C$) och mäter följande storheter som funktion av tid:
-
-+ Temperaturer $T_H(t)$ och $T_C(t)$.
-+ Elektrisk effekt till kompressorn $P(t)$.
-+ Kylmediets fas i olika delar av cykeln.
-
-Inget vattenflöde används, vilket förenklar beräkningen av den totala energin i systemet.
+- Slutet system: Ingen extern tillförsel av vatten.
+- Mätstorheter: $T_H(t), T_C(t)$ och $P(t)$.
+- $P(t)$ extraherat via OCR från video.
+- Stationära massor: $m_H$ och $m_C$.
 
 == Hypotes
 
-Vi förväntar oss att $C O P$ minskar när temperaturskillnaden $Delta T = T_H - T_C$ ökar.
+$ C O P prop 1 / (Delta T) $
 
-Kvalitativt bör det följa beteendet hos en ideal värmepump:
-$ C O P_(h,"ideal") = T_H / (T_H - T_C) $
+- Ideal värmepump: $C O P_(h,"ideal") = T_H / (T_H - T_C)$.
+- Realistiskt system: Ökade förluster vid högre tryck/temperatur-differens.
 
-Ju större temperaturskillnad kompressorn måste arbeta mot, desto lägre blir verkningsgraden.
+== Felanalys
 
-== Resultat
+Kvadratisk felutbredning:
+$ ( (delta C O P) / (C O P) )^2 = ( (delta m) / m )^2 + ( (delta dot(T)) / dot(T) )^2 + ( (delta P) / P )^2 $
 
-Här presenteras mätdata, grafer över $T(t)$ samt beräknade värden på $C O P$ som funktion av $Delta T$.
+- *Massa ($m$):* $plus.minus 2 %$.
+- *Effekt ($P$):* $plus.minus 3 %$.
+- *Temp-gradient ($dot(T)$):* $plus.minus 0.1$ °C / $30$ s.
+
+*Huvudinsikt:* Felet domineras av $dot(T)$ när systemet närmar sig jämvikt.
+
+== Resultat: Temperaturutveckling
+
+#grid(
+  columns: (1fr, 1fr, 1fr),
+  gutter: 10pt,
+  image("../images/temperature_run1.png", width: 100%),
+  image("../images/temperature_run2.png", width: 100%),
+  image("../images/temperature_run3.png", width: 100%)
+)
+
+- Tydlig trend: $T_H$ ökar, $T_C$ minskar.
+- $P(t)$ stabilt i intervallet $130$–$160$ W.
+
+== Resultat: COP-analys
+
+#align(center)[
+  #image("../images/cop_analysis.png", width: 65%)
+]
+
+- $C O P$ sjunker som väntat med ökande $Delta T$.
+- Run 2: Högre massflöde ger högre initial effektivitet.
+
+== Resultat: Osäkerhet
+
+#grid(
+  columns: (1fr, 1fr),
+  gutter: 10pt,
+  image("../images/uncertainty_cop_bands.png", width: 100%),
+  image("../images/error_sources_comparison.png", width: 100%)
+)
+
+- Relativt fel: $15$–$30 %$.
+- Osäkerheten ökar när $dot(T) -> 0$.
+
+= Slutsats
+
+- Hypotesen bekräftad.
+- Massa har stor inverkan på praktisk $C O P$.
+- Sensorprecision begränsar mätning vid små gradienter.
+
+

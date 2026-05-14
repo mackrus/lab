@@ -1,7 +1,8 @@
+from pathlib import Path
+
 import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sns
-from pathlib import Path
 
 # Set a crisp style
 sns.set_theme(style="whitegrid", context="talk")
@@ -12,9 +13,9 @@ DATA_DIR = ROOT / "data"
 IMAGES_DIR = ROOT / "images"
 STARTUP_CUTOFF_S = 20.0
 MASS_STABLE_WINDOW_S = 5.0
-MAX_POWER_W = 1200.0
-MAX_POWER_STEP_W = 120.0
-PLOT_POWER_YMAX_W = 20.0
+MAX_POWER_W = 250.0
+MAX_POWER_STEP_W = 50.0
+PLOT_POWER_YMAX_W = 200.0
 
 
 def load_lab_csv(path, run_name=None):
@@ -70,32 +71,45 @@ data_run_2 = load_lab_csv(DATA_DIR / "run_2_8_may.csv", run_name="Run #6")
 data_run_3 = load_lab_csv(DATA_DIR / "run_3_8_may.csv")
 
 
-def calculate_cop(data, m_h, m_c, p_pump=13.0):
+def calculate_cop(data, m_h, m_c, t_power, p_power):
     """
-    Calculate COP_H and COP_C based on temperature changes.
+    Calculate COP_H and COP_C based on temperature changes and actual compressor power.
     """
     cp = 4180.0  # J/(kg*K)
+    data = trim_startup(data)
     t = data[:, 0]
-    th = np.nanmean(data[:, 1:4], axis=1)
-    tc = np.nanmean(data[:, 4:7], axis=1)
+    th = data[:, 1]  # Reservoir T_H
+    tc = data[:, 4]  # Reservoir T_C
 
     dt = np.gradient(t)
     dt[dt == 0] = np.nan
     dth = np.gradient(th) / dt
     dtc = np.gradient(tc) / dt
 
-    window = 100
-    dth_smooth = np.convolve(dth, np.ones(window) / window, mode="same")
-    dtc_smooth = np.convolve(dtc, np.ones(window) / window, mode="same")
+    # 30-second smoothing window at 20Hz
+    window = 600
+    dth_smooth = smooth_signal(dth, window=window)
+    dtc_smooth = smooth_signal(dtc, window=window)
 
     q_h = m_h * cp * dth_smooth
     q_c = -m_c * cp * dtc_smooth
 
-    cop_h = q_h / p_pump
-    cop_c = q_c / p_pump
-    delta_t = th - tc
+    # Interpolate power to match temperature timestamps
+    p_interp = np.interp(t, t_power, p_power)
+    # Smooth power with the same window to keep COP stable
+    p_smooth = smooth_signal(p_interp, window=window)
+    p_smooth = np.maximum(p_smooth, 1.0)  # Avoid division by zero
 
-    return delta_t, cop_h, cop_c
+    cop_h = q_h / p_smooth
+    cop_c = q_c / p_smooth
+    delta_t = th - tc
+    
+    # Carnot COP = T_H (Kelvin) / Delta T
+    # Avoid division by zero in case delta_t is very small
+    th_k = th + 273.15
+    cop_ideal = th_k / np.maximum(delta_t, 0.1)
+
+    return delta_t, cop_h, cop_c, cop_ideal
 
 
 def load_power_csv(path):
@@ -132,7 +146,9 @@ def stable_mass_from_force(data, force_col=8, window_s=MASS_STABLE_WINDOW_S, g=9
     in_window = t_valid >= (t_end - window_s)
     f_stable = f_valid[in_window]
     if len(f_stable) == 0:
-        raise ValueError("No force samples found in stable end window for mass estimation.")
+        raise ValueError(
+            "No force samples found in stable end window for mass estimation."
+        )
 
     # Use median of end window to suppress late noise/spikes.
     force_stable_n = float(np.nanmedian(f_stable))
@@ -143,7 +159,9 @@ def smooth_signal(x, window=7):
     if window <= 1 or len(x) < window:
         return x
     kernel = np.ones(window, dtype=float) / window
-    return np.convolve(x, kernel, mode="same")
+    pad_w = window // 2
+    x_padded = np.pad(x, (pad_w, window - 1 - pad_w), mode="edge")
+    return np.convolve(x_padded, kernel, mode="valid")
 
 
 def clean_power_signal(t_power, p_power):
@@ -155,7 +173,8 @@ def clean_power_signal(t_power, p_power):
     if len(p) == 0:
         return t, p
 
-    outlier = (p < 0) | (p > MAX_POWER_W)
+    # Filter out unrealistic values (> MAX) and OCR zero-dropouts (< 50.0W)
+    outlier = (p < 50.0) | (p > MAX_POWER_W)
 
     if len(p) >= 3:
         dp_prev = np.abs(p[1:-1] - p[:-2])
@@ -163,18 +182,12 @@ def clean_power_signal(t_power, p_power):
         isolated_jump = (dp_prev > MAX_POWER_STEP_W) & (dp_next > MAX_POWER_STEP_W)
         outlier[1:-1] |= isolated_jump
 
-    med = float(np.nanmedian(p))
-    mad = float(np.nanmedian(np.abs(p - med)))
-    scale = 1.4826 * mad + 1e-9
-    robust_z = np.abs((p - med) / scale)
-    outlier |= robust_z > 8.0
-
     if np.any(outlier):
         keep = ~outlier
         if np.count_nonzero(keep) >= 2:
             p[outlier] = np.interp(t[outlier], t[keep], p[keep])
         else:
-            p[outlier] = med
+            p[outlier] = float(np.nanmedian(p))
 
     p = smooth_signal(p, window=7)
     return t, p
@@ -183,18 +196,16 @@ def clean_power_signal(t_power, p_power):
 def main():
 
     g = 9.82  # Uppsala gravity constant
-    # Run 1 used a different fill target (from logged force values in error_estimate).
-    run1_m_h = 32.25 / g
-    run1_m_c = 26.55 / g
+    bucket_n = 4.0
+    
+    # Run 1: Cold 48.86N, Hot 49.2N (minus bucket)
+    run1_m_h = (49.2 - bucket_n) / g
+    run1_m_c = (48.86 - bucket_n) / g
 
-    raw_run_2 = load_lab_csv(DATA_DIR / "run_2_8_may.csv", run_name="Run #2")
-    run23_m_h = stable_mass_from_force(
-        raw_run_2, force_col=8, window_s=MASS_STABLE_WINDOW_S, g=g
-    )
-    raw_run_3_force = load_lab_csv(DATA_DIR / "run_2_8_may.csv", run_name="Run #3")
-    run23_m_c = stable_mass_from_force(
-        raw_run_3_force, force_col=8, window_s=MASS_STABLE_WINDOW_S, g=g
-    )
+    # Run 2 & 3: Cold 48.5N, Hot 47.7N (minus bucket)
+    run23_m_h = (47.7 - bucket_n) / g
+    run23_m_c = (48.5 - bucket_n) / g
+
     print(
         "Using constant masses for COP:"
         f" run1(m_h={run1_m_h:.3f}, m_c={run1_m_c:.3f}) kg,"
@@ -226,7 +237,7 @@ def main():
         "$T_C$ (Inlet Liquid)",
     ]
 
-    for data, name, power_path in runs:
+    for i, (data, name, power_path) in enumerate(runs):
         fig, (ax, ax_p) = plt.subplots(
             2,
             1,
@@ -234,32 +245,37 @@ def main():
             sharex=True,
             gridspec_kw={"height_ratios": [4, 1], "hspace": 0.08},
         )
+        
+        # Select correct masses for the run
+        mh = run1_m_h if i == 0 else run23_m_h
+        mc = run1_m_c if i == 0 else run23_m_c
+        
         data = trim_startup(data)
         t = data[:, 0]
         line_styles = ["-", "--", ":"]
         line_alphas = [1.0, 0.8, 0.8]
 
         # Hot channels (1-3)
-        for i in range(3):
+        for i_ch in range(3):
             ax.plot(
                 t,
-                data[:, i + 1],
-                label=hot_labels[i],
-                color=hot_colors[i],
+                data[:, i_ch + 1],
+                label=hot_labels[i_ch],
+                color=hot_colors[i_ch],
                 lw=2,
-                linestyle=line_styles[i],
-                alpha=line_alphas[i],
+                linestyle=line_styles[i_ch],
+                alpha=line_alphas[i_ch],
             )
         # Cold channels (4-6)
-        for i in range(3):
+        for i_ch in range(3):
             ax.plot(
                 t,
-                data[:, i + 4],
-                label=cold_labels[i],
-                color=cold_colors[i],
+                data[:, i_ch + 4],
+                label=cold_labels[i_ch],
+                color=cold_colors[i_ch],
                 lw=2,
-                linestyle=line_styles[i],
-                alpha=line_alphas[i],
+                linestyle=line_styles[i_ch],
+                alpha=line_alphas[i_ch],
             )
 
         t_power, p_power = load_power_csv(power_path)
@@ -274,11 +290,16 @@ def main():
             label="$P(t)$",
         )[0]
 
-        ax.set_title(f"{name}: Temperature Evolution", pad=20)
+        ax.set_title(f"{name}: Temperature Evolution ($m_H$={mh:.2f}kg, $m_C$={mc:.2f}kg)", pad=20)
         ax.set_ylabel("Temperature (°C)")
         ax_p.set_ylabel("Power (W)")
         ax_p.set_xlabel("Time (s)")
-        ax_p.set_ylim(0.0, PLOT_POWER_YMAX_W)
+        
+        # Dynamic Y-axis for power to zoom in on the interesting range
+        p_min, p_max = np.min(p_power), np.max(p_power)
+        p_margin = (p_max - p_min) * 0.15 if p_max > p_min else 2.0
+        ax_p.set_ylim(p_min - p_margin, p_max + p_margin)
+        
         ax_p.grid(True, alpha=0.25)
 
         lines_1, labels_1 = ax.get_legend_handles_labels()
@@ -293,38 +314,49 @@ def main():
         fig.tight_layout()
 
         filename = f"temperature_{name.lower().replace(' ', '')}.png"
-        fig.savefig(IMAGES_DIR / filename, dpi=300)
+        fig.savefig(IMAGES_DIR / filename, dpi=300, bbox_inches="tight")
         plt.close(fig)
         print(f"Plot saved to {filename}")
 
     # 2. COP Analysis
-    dt1, coph1, copc1 = calculate_cop(data_run_1, run1_m_h, run1_m_c)
-    dt2, coph2, copc2 = calculate_cop(data_run_2, run23_m_h, run23_m_c)
-    dt3, coph3, copc3 = calculate_cop(data_run_3, run23_m_h, run23_m_c)
+    def get_clean_power(path):
+        t, p = load_power_csv(path)
+        t, p = trim_power_startup(t, p)
+        return clean_power_signal(t, p)
 
-    plt.figure(figsize=(10, 6))
+    t_p1, p_p1 = get_clean_power(DATA_DIR / "power_run_1.csv")
+    dt1, coph1, copc1, id1 = calculate_cop(data_run_1, run1_m_h, run1_m_c, t_p1, p_p1)
+
+    t_p2, p_p2 = get_clean_power(DATA_DIR / "power_run_2.csv")
+    dt2, coph2, copc2, id2 = calculate_cop(data_run_2, run23_m_h, run23_m_c, t_p2, p_p2)
+
+    t_p3, p_p3 = get_clean_power(DATA_DIR / "power_run_3.csv")
+    dt3, coph3, copc3, id3 = calculate_cop(data_run_3, run23_m_h, run23_m_c, t_p3, p_p3)
+
+    plt.figure(figsize=(12, 7))
     mask1 = (dt1 > 1) & (dt1 < 35)
     mask2 = (dt2 > 1) & (dt2 < 35)
-    mask3 = (dt3 > 1) & (dt3 < 35)
+    mask3 = (dt3 > 1) & (dt3 < 40)
 
     run_colors = sns.color_palette("viridis", 3)
 
-    plt.plot(dt1[mask1], coph1[mask1], label="Run 1: COP_H", color=run_colors[0], lw=2)
-    plt.plot(dt2[mask2], coph2[mask2], label="Run 2: COP_H", color=run_colors[1], lw=2)
-    plt.plot(dt3[mask3], coph3[mask3], label="Run 3: COP_H", color=run_colors[2], lw=2)
+    # Plot Measured
+    plt.plot(dt1[mask1], coph1[mask1], label="Run 1: Measured", color=run_colors[0], lw=2.5)
+    plt.plot(dt2[mask2], coph2[mask2], label="Run 2: Measured", color=run_colors[1], lw=2.5)
+    plt.plot(dt3[mask3], coph3[mask3], label="Run 3: Measured", color=run_colors[2], lw=2.5)
 
-    delta_t_range = np.linspace(2, 35, 100)
-    t_h_ref = delta_t_range + 20 + 273.15
-    cop_ideal = t_h_ref / delta_t_range
-    plt.plot(delta_t_range, cop_ideal, "k:", label="Ideal COP_H (T_C=20°C)", alpha=0.6)
+    # Plot Ideal (Carnot) for each run
+    plt.plot(dt1[mask1], id1[mask1], linestyle="--", color=run_colors[0], alpha=0.5, label="Run 1: Ideal")
+    plt.plot(dt2[mask2], id2[mask2], linestyle="--", color=run_colors[1], alpha=0.5, label="Run 2: Ideal")
+    plt.plot(dt3[mask3], id3[mask3], linestyle="--", color=run_colors[2], alpha=0.5, label="Run 3: Ideal")
 
-    plt.title("COP vs Delta T", pad=20)
-    plt.xlabel("Delta T (T_H - T_C) [°C]")
+    plt.title("COP vs Delta T: Measured vs Carnot Limit", pad=20)
+    plt.xlabel("Delta T ($T_H - T_C$) [°C]")
     plt.ylabel("COP")
-    plt.ylim(0, 15)
-    plt.legend()
+    plt.ylim(0, 20)
+    plt.legend(ncol=2, fontsize='small')
     plt.tight_layout()
-    plt.savefig(IMAGES_DIR / "cop_analysis.png", dpi=300)
+    plt.savefig(IMAGES_DIR / "cop_analysis.png", dpi=300, bbox_inches="tight")
     plt.close()
     print("COP analysis saved to cop_analysis.png")
 

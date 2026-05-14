@@ -7,49 +7,40 @@ import pandas as pd
 import pytesseract
 
 
-def parse_power_value(raw_text, prev_value=None, max_power_w=20.0):
+def parse_power_value(raw_text, prev_value=None, max_power_w=160.0):
     s = "".join(ch for ch in raw_text if ch.isdigit() or ch == ".")
     if not s:
         return np.nan
 
-    candidates = []
-
-    # Direct parse when OCR already found a decimal point.
-    if "." in s:
-        try:
-            candidates.append(float(s))
-        except ValueError:
-            pass
-    else:
-        # Integer OCR output can be decimal-point misread.
-        n = int(s)
-        candidates.extend([float(n), n / 10.0, n / 100.0])
-        # Prefer "first two digits before decimal" when possible.
-        if len(s) >= 2:
-            frac = s[2:] if len(s) > 2 else "0"
-            candidates.append(float(f"{s[:2]}.{frac}"))
-
-    # Keep only realistic powers.
+    digits_only = s.replace(".", "")
+    if not digits_only:
+        return np.nan
+        
+    n = int(digits_only)
+    candidates = [float(n), n / 10.0, n / 100.0]
+    
+    if len(digits_only) >= 3:
+        frac = digits_only[3:] if len(digits_only) > 3 else "0"
+        candidates.append(float(f"{digits_only[:3]}.{frac}"))
+        
     valid = [c for c in candidates if 0.0 <= c <= max_power_w]
     if not valid:
         return np.nan
 
-    # Prefer the 2-digit-before-decimal interpretation.
-    if "." not in s and len(s) >= 2:
-        frac = s[2:] if len(s) > 2 else "0"
-        two_digit_split = float(f"{s[:2]}.{frac}")
-        if 0.0 <= two_digit_split <= max_power_w:
-            if prev_value is None or not np.isfinite(prev_value):
-                return two_digit_split
-            # If close to previous sample, use it directly.
-            if abs(two_digit_split - prev_value) <= 3.0:
-                return two_digit_split
+    active_candidates = [c for c in valid if 80.0 <= c <= max_power_w]
+    
+    if prev_value is not None and prev_value > 50.0:
+        if active_candidates:
+            return min(active_candidates, key=lambda x: abs(x - prev_value))
+        return min(valid, key=lambda x: abs(x - prev_value))
+    
+    if active_candidates:
+        # Compressor just turned on, jump to the most plausible active reading
+        return max(active_candidates) 
 
-    # Otherwise, if we have a previous value, choose the smoothest continuation.
     if prev_value is not None and np.isfinite(prev_value):
         return min(valid, key=lambda x: abs(x - prev_value))
-
-    # Startup fallback: pick the largest plausible value to avoid tiny-scale lock-in.
+        
     return max(valid)
 
 
