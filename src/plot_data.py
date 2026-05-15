@@ -17,6 +17,11 @@ MAX_POWER_W = 250.0
 MAX_POWER_STEP_W = 50.0
 PLOT_POWER_YMAX_W = 200.0
 
+# Uncertainty constants
+ERR_TEMP_C = 0.1       # Sensor precision in Celsius
+ERR_MASS_REL = 0.02    # 2% uncertainty in mass estimation
+ERR_POWER_REL = 0.03   # 3% uncertainty in power
+
 
 def load_lab_csv(path, run_name=None):
     """
@@ -74,6 +79,7 @@ data_run_3 = load_lab_csv(DATA_DIR / "run_3_8_may.csv")
 def calculate_cop(data, m_h, m_c, t_power, p_power):
     """
     Calculate COP_H and COP_C based on temperature changes and actual compressor power.
+    Includes uncertainty propagation for COP_H.
     """
     cp = 4180.0  # J/(kg*K)
     data = trim_startup(data)
@@ -109,7 +115,14 @@ def calculate_cop(data, m_h, m_c, t_power, p_power):
     th_k = th + 273.15
     cop_ideal = th_k / np.maximum(delta_t, 0.1)
 
-    return delta_t, cop_h, cop_c, cop_ideal
+    # Uncertainty propagation:
+    # (dCOP/COP)^2 = (dm/m)^2 + (d(dT/dt)/(dT/dt))^2 + (dP/P)^2
+    # For dT/dt, we estimate error as ERR_TEMP / delta_time_of_smoothing (30s)
+    err_dt_dt = (ERR_TEMP_C / 30.0) / np.maximum(np.abs(dth_smooth), 1e-6)
+    rel_err_sq = (ERR_MASS_REL)**2 + (err_dt_dt)**2 + (ERR_POWER_REL)**2
+    err_h = np.abs(cop_h) * np.sqrt(rel_err_sq)
+
+    return delta_t, cop_h, cop_c, cop_ideal, err_h
 
 
 def load_power_csv(path):
@@ -325,13 +338,13 @@ def main():
         return clean_power_signal(t, p)
 
     t_p1, p_p1 = get_clean_power(DATA_DIR / "power_run_1.csv")
-    dt1, coph1, copc1, id1 = calculate_cop(data_run_1, run1_m_h, run1_m_c, t_p1, p_p1)
+    dt1, coph1, copc1, id1, err1 = calculate_cop(data_run_1, run1_m_h, run1_m_c, t_p1, p_p1)
 
     t_p2, p_p2 = get_clean_power(DATA_DIR / "power_run_2.csv")
-    dt2, coph2, copc2, id2 = calculate_cop(data_run_2, run23_m_h, run23_m_c, t_p2, p_p2)
+    dt2, coph2, copc2, id2, err2 = calculate_cop(data_run_2, run23_m_h, run23_m_c, t_p2, p_p2)
 
     t_p3, p_p3 = get_clean_power(DATA_DIR / "power_run_3.csv")
-    dt3, coph3, copc3, id3 = calculate_cop(data_run_3, run23_m_h, run23_m_c, t_p3, p_p3)
+    dt3, coph3, copc3, id3, err3 = calculate_cop(data_run_3, run23_m_h, run23_m_c, t_p3, p_p3)
 
     plt.figure(figsize=(12, 7))
     mask1 = (dt1 > 1) & (dt1 < 35)
@@ -340,10 +353,15 @@ def main():
 
     run_colors = sns.color_palette("viridis", 3)
 
-    # Plot Measured
+    # Plot Measured with Error Bands
     plt.plot(dt1[mask1], coph1[mask1], label="Run 1: Measured", color=run_colors[0], lw=2.5)
+    plt.fill_between(dt1[mask1], coph1[mask1] - err1[mask1], coph1[mask1] + err1[mask1], color=run_colors[0], alpha=0.15)
+
     plt.plot(dt2[mask2], coph2[mask2], label="Run 2: Measured", color=run_colors[1], lw=2.5)
+    plt.fill_between(dt2[mask2], coph2[mask2] - err2[mask2], coph2[mask2] + err2[mask2], color=run_colors[1], alpha=0.15)
+
     plt.plot(dt3[mask3], coph3[mask3], label="Run 3: Measured", color=run_colors[2], lw=2.5)
+    plt.fill_between(dt3[mask3], coph3[mask3] - err3[mask3], coph3[mask3] + err3[mask3], color=run_colors[2], alpha=0.15)
 
     # Plot Ideal (Carnot) for each run
     plt.plot(dt1[mask1], id1[mask1], linestyle="--", color=run_colors[0], alpha=0.5, label="Run 1: Ideal")
