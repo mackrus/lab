@@ -15,7 +15,7 @@ IMAGES_DIR = ROOT / "images"
 # Constants for uncertainty (estimates)
 ERR_TEMP_C = 0.1       # Sensor precision in Celsius
 ERR_MASS_REL = 0.02    # 2% uncertainty in mass estimation (scale noise/calibration)
-ERR_POWER_REL = 0.03   # 3% uncertainty in power (OCR jitter/sampling)
+ERR_POWER_REL = 0.02   # 2% uncertainty in power (Capstone sensor spec)
 CP = 4180.0            # J/(kg*K)
 
 def calculate_uncertainty(data, m_h, t_power, p_power):
@@ -66,7 +66,7 @@ def calculate_uncertainty(data, m_h, t_power, p_power):
     return t, th, cop_h, abs_err, (contrib_mass, contrib_temp, contrib_power)
 
 def main():
-    g = 9.82
+    g = 9.818
     bucket_n = 4.0
     
     # Run 1

@@ -18,9 +18,9 @@ MAX_POWER_STEP_W = 50.0
 PLOT_POWER_YMAX_W = 200.0
 
 # Uncertainty constants
-ERR_TEMP_C = 0.1       # Sensor precision in Celsius
-ERR_MASS_REL = 0.02    # 2% uncertainty in mass estimation
-ERR_POWER_REL = 0.03   # 3% uncertainty in power
+ERR_TEMP_C = 0.1  # Sensor precision in Celsius
+ERR_MASS_REL = 0.02  # 2% uncertainty in mass estimation
+ERR_POWER_REL = 0.02  # 2% uncertainty in power (Capstone sensor spec)
 
 
 def load_lab_csv(path, run_name=None):
@@ -109,7 +109,7 @@ def calculate_cop(data, m_h, m_c, t_power, p_power):
     cop_h = q_h / p_smooth
     cop_c = q_c / p_smooth
     delta_t = th - tc
-    
+
     # Carnot COP = T_H (Kelvin) / Delta T
     # Avoid division by zero in case delta_t is very small
     th_k = th + 273.15
@@ -119,7 +119,7 @@ def calculate_cop(data, m_h, m_c, t_power, p_power):
     # (dCOP/COP)^2 = (dm/m)^2 + (d(dT/dt)/(dT/dt))^2 + (dP/P)^2
     # For dT/dt, we estimate error as ERR_TEMP / delta_time_of_smoothing (30s)
     err_dt_dt = (ERR_TEMP_C / 30.0) / np.maximum(np.abs(dth_smooth), 1e-6)
-    rel_err_sq = (ERR_MASS_REL)**2 + (err_dt_dt)**2 + (ERR_POWER_REL)**2
+    rel_err_sq = (ERR_MASS_REL) ** 2 + (err_dt_dt) ** 2 + (ERR_POWER_REL) ** 2
     err_h = np.abs(cop_h) * np.sqrt(rel_err_sq)
 
     return delta_t, cop_h, cop_c, cop_ideal, err_h
@@ -208,9 +208,9 @@ def clean_power_signal(t_power, p_power):
 
 def main():
 
-    g = 9.82  # Uppsala gravity constant
+    g = 9.818  # Uppsala gravity constant
     bucket_n = 4.0
-    
+
     # Run 1: Cold 48.86N, Hot 49.2N (minus bucket)
     run1_m_h = (49.2 - bucket_n) / g
     run1_m_c = (48.86 - bucket_n) / g
@@ -258,11 +258,11 @@ def main():
             sharex=True,
             gridspec_kw={"height_ratios": [4, 1], "hspace": 0.08},
         )
-        
+
         # Select correct masses for the run
         mh = run1_m_h if i == 0 else run23_m_h
         mc = run1_m_c if i == 0 else run23_m_c
-        
+
         data = trim_startup(data)
         t = data[:, 0]
         line_styles = ["-", "--", ":"]
@@ -303,16 +303,19 @@ def main():
             label="$P(t)$",
         )[0]
 
-        ax.set_title(f"{name}: Temperature Evolution ($m_H$={mh:.2f}kg, $m_C$={mc:.2f}kg)", pad=20)
+        ax.set_title(
+            f"{name}: Temperature Evolution ($m_H$={mh:.2f}kg, $m_C$={mc:.2f}kg)",
+            pad=20,
+        )
         ax.set_ylabel("Temperature (°C)")
         ax_p.set_ylabel("Power (W)")
         ax_p.set_xlabel("Time (s)")
-        
+
         # Dynamic Y-axis for power to zoom in on the interesting range
         p_min, p_max = np.min(p_power), np.max(p_power)
         p_margin = (p_max - p_min) * 0.15 if p_max > p_min else 2.0
         ax_p.set_ylim(p_min - p_margin, p_max + p_margin)
-        
+
         ax_p.grid(True, alpha=0.25)
 
         lines_1, labels_1 = ax.get_legend_handles_labels()
@@ -338,13 +341,19 @@ def main():
         return clean_power_signal(t, p)
 
     t_p1, p_p1 = get_clean_power(DATA_DIR / "power_run_1.csv")
-    dt1, coph1, copc1, id1, err1 = calculate_cop(data_run_1, run1_m_h, run1_m_c, t_p1, p_p1)
+    dt1, coph1, copc1, id1, err1 = calculate_cop(
+        data_run_1, run1_m_h, run1_m_c, t_p1, p_p1
+    )
 
     t_p2, p_p2 = get_clean_power(DATA_DIR / "power_run_2.csv")
-    dt2, coph2, copc2, id2, err2 = calculate_cop(data_run_2, run23_m_h, run23_m_c, t_p2, p_p2)
+    dt2, coph2, copc2, id2, err2 = calculate_cop(
+        data_run_2, run23_m_h, run23_m_c, t_p2, p_p2
+    )
 
     t_p3, p_p3 = get_clean_power(DATA_DIR / "power_run_3.csv")
-    dt3, coph3, copc3, id3, err3 = calculate_cop(data_run_3, run23_m_h, run23_m_c, t_p3, p_p3)
+    dt3, coph3, copc3, id3, err3 = calculate_cop(
+        data_run_3, run23_m_h, run23_m_c, t_p3, p_p3
+    )
 
     plt.figure(figsize=(12, 7))
     mask1 = (dt1 > 1) & (dt1 < 35)
@@ -354,25 +363,52 @@ def main():
     run_colors = sns.color_palette("viridis", 3)
 
     # Plot Measured with Error Bands
-    plt.plot(dt1[mask1], coph1[mask1], label="Run 1: Measured", color=run_colors[0], lw=2.5)
-    plt.fill_between(dt1[mask1], coph1[mask1] - err1[mask1], coph1[mask1] + err1[mask1], color=run_colors[0], alpha=0.15)
-
-    plt.plot(dt2[mask2], coph2[mask2], label="Run 2: Measured", color=run_colors[1], lw=2.5)
-    plt.fill_between(dt2[mask2], coph2[mask2] - err2[mask2], coph2[mask2] + err2[mask2], color=run_colors[1], alpha=0.15)
-
-    plt.plot(dt3[mask3], coph3[mask3], label="Run 3: Measured", color=run_colors[2], lw=2.5)
-    plt.fill_between(dt3[mask3], coph3[mask3] - err3[mask3], coph3[mask3] + err3[mask3], color=run_colors[2], alpha=0.15)
+    plt.plot(
+        dt1[mask1], coph1[mask1], label="Run 1: Measured", color=run_colors[0], lw=2.5
+    )
+    # plt.fill_between(dt1[mask1], coph1[mask1] - err1[mask1], coph1[mask1] + err1[mask1], color=run_colors[0], alpha=0.15)
+    #
+    plt.plot(
+        dt2[mask2], coph2[mask2], label="Run 2: Measured", color=run_colors[1], lw=2.5
+    )
+    # plt.fill_between(dt2[mask2], coph2[mask2] - err2[mask2], coph2[mask2] + err2[mask2], color=run_colors[1], alpha=0.15)
+    #
+    plt.plot(
+        dt3[mask3], coph3[mask3], label="Run 3: Measured", color=run_colors[2], lw=2.5
+    )
+    # plt.fill_between(dt3[mask3], coph3[mask3] - err3[mask3], coph3[mask3] + err3[mask3], color=run_colors[2], alpha=0.15)
 
     # Plot Ideal (Carnot) for each run
-    plt.plot(dt1[mask1], id1[mask1], linestyle="--", color=run_colors[0], alpha=0.5, label="Run 1: Ideal")
-    plt.plot(dt2[mask2], id2[mask2], linestyle="--", color=run_colors[1], alpha=0.5, label="Run 2: Ideal")
-    plt.plot(dt3[mask3], id3[mask3], linestyle="--", color=run_colors[2], alpha=0.5, label="Run 3: Ideal")
+    plt.plot(
+        dt1[mask1],
+        id1[mask1],
+        linestyle="--",
+        color=run_colors[0],
+        alpha=0.5,
+        label="Run 1: Ideal",
+    )
+    plt.plot(
+        dt2[mask2],
+        id2[mask2],
+        linestyle="--",
+        color=run_colors[1],
+        alpha=0.5,
+        label="Run 2: Ideal",
+    )
+    plt.plot(
+        dt3[mask3],
+        id3[mask3],
+        linestyle="--",
+        color=run_colors[2],
+        alpha=0.5,
+        label="Run 3: Ideal",
+    )
 
     plt.title("COP vs Delta T: Measured vs Carnot Limit", pad=20)
     plt.xlabel("Delta T ($T_H - T_C$) [°C]")
     plt.ylabel("COP")
     plt.ylim(0, 20)
-    plt.legend(ncol=2, fontsize='small')
+    plt.legend(ncol=2, fontsize="small")
     plt.tight_layout()
     plt.savefig(IMAGES_DIR / "cop_analysis.png", dpi=300, bbox_inches="tight")
     plt.close()

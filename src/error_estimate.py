@@ -45,7 +45,7 @@ def estimate_uncertainty_poly(data, m_h, m_c, p_pump=13.0, degree=3):
     cop_c = q_c / p_pump
 
     rel_err_h = np.sqrt(
-        (dm / m_h) ** 2 + (ddt / np.abs(dth_fit)) ** 2 + (dp / p_pump) ** 2
+        (dm_rel) ** 2 + (ddt / np.abs(dth_fit)) ** 2 + (dp_rel) ** 2
     )
 
     return (
@@ -61,7 +61,7 @@ def main():
     data_run_1 = load_lab_csv("../data/run_1_8_may.csv")
 
     # Masses from previous analysis
-    g = 9.82  # Uppsala constant
+    g = 9.818  # Uppsala constant
     m_h = 32.25 / g
     m_c = 26.55 / g
 
@@ -70,6 +70,11 @@ def main():
     print(f"Polynomial Fit COP_H at start: {cop_h[0]:.2f} +/- {err_h[0]:.2f}")
     print(f"Polynomial Fit COP_H at end:   {cop_h[-1]:.2f} +/- {err_h[-1]:.2f}")
     print(f"Average Relative Error: {100 * np.nanmean(err_h / np.abs(cop_h)):.1f}%")
+
+
+if __name__ == "__main__":
+    main()
+nanmean(err_h / np.abs(cop_h)):.1f}%")
 
 
 if __name__ == "__main__":
