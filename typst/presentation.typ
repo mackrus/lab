@@ -91,21 +91,22 @@ $ "COP"_H approx T_H / (T_H - T_C) $
 #grid(
   columns: (1fr, 1.25fr),
   gutter: 0pt,
-  [
-    #set text(12pt)
-    *Systematiska & slumpmässiga fel*
-    - Värmeläckage till/från omgivningen.
-    - Osäkerheter i $P(t)$ pga. OCR/avläsning.
-    - Sensorernas tidsförskjutning.
-    - Mätosäkerheter i temperatur och massa.
+  [ #text(21pt)[
+      *Systmatiska & slumpmässiga fel*
+      - Värmeläckage till/från omgivningen.
+      - Osäkerheter i $P(t)$ pga. OCR/avläsning.
+      - Sensorernas tidsförskjutning.
+      - Mätosäkerheter i temperatur och massa.
+    ]
   ],
-  [
-    *Rimlighetsanalys*
-    - Uppmätt $"COP"_H$ (1--5) är rimligt för verkliga maskiner.
-    - Ideala värden divergerar vid små $Delta T$.
-    - Slutet system:
-      $ Delta = "COP"_H - "COP"_C = 1 $
+  [#text(21pt)[
 
+      *Rimlighetsanalys*
+      - Uppmätt $"COP"_H$ (1--5) är rimligt för verkliga maskiner.
+      - Ideala värden divergerar vid små $Delta T$.
+      - Slutet system:
+        $ Delta = "COP"_H - "COP"_C = 1 $
+    ]
     #align(center)[
       #set text(12pt)
       #table(
