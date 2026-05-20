@@ -77,9 +77,9 @@ $ "COP"_H approx T_H / (T_H - T_C) $
 
 = Resultat
 
-#full-plot("../images/temperature_mätnintg1.png")
-#full-plot("../images/temperature_mötning2.png")
-#full-plot("../images/temperature_mätnintg3.png")
+#full-plot("../images/temperature_mätning1.png")
+#full-plot("../images/temperature_mätning2.png")
+#full-plot("../images/temperature_mätning3.png")
 #full-plot("../images/cop_analysis.png")
 
 = Slutsats
