@@ -90,8 +90,9 @@ $ "COP"_H approx T_H / (T_H - T_C) $
 
 #grid(
   columns: (1fr, 1.25fr),
-  gutter: 1pt,
+  gutter: 0pt,
   [
+    #set text(12pt)
     *Systematiska & slumpmässiga fel*
     - Värmeläckage till/från omgivningen.
     - Osäkerheter i $P(t)$ pga. OCR/avläsning.
