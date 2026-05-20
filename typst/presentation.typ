@@ -8,7 +8,7 @@
   ),
 )[
   #align(center + horizon)[
-    #image(path, width: 91%)
+    #image(path, width: 90%)
   ]
 ]
 
@@ -47,8 +47,8 @@ $
   columns: (1fr, 1fr),
   gutter: 6pt,
   align: auto,
-  image("../images/setup_with_ref.png", width: 92%),
-  image("../images/flow_diagram.pdf", width: 92%),
+  image("../images/setup_with_ref.png", width: 91%),
+  image("../images/flow_diagram.pdf", width: 94%),
 
   image("../images/p_setup.png", width: 20%),
 )
