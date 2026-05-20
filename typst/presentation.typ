@@ -90,7 +90,7 @@ $ "COP"_H approx T_H / (T_H - T_C) $
 
 #grid(
   columns: (1fr, 1.25fr),
-  gutter: 11pt,
+  gutter: 1pt,
   [
     *Systematiska & slumpmässiga fel*
     - Värmeläckage till/från omgivningen.
@@ -102,10 +102,11 @@ $ "COP"_H approx T_H / (T_H - T_C) $
     *Rimlighetsanalys*
     - Uppmätt $"COP"_H$ (1--5) är rimligt för verkliga maskiner.
     - Ideala värden divergerar vid små $Delta T$.
-    - Idealt slutet system:
+    - Slutet system:
       $ Delta = "COP"_H - "COP"_C = 1 $
 
     #align(center)[
+      #set text(12pt)
       #table(
         columns: (1fr, 1.2fr, 1fr),
         align: center + horizon,
@@ -116,6 +117,5 @@ $ "COP"_H approx T_H / (T_H - T_C) $
         [Mätning 3], [$1.69$], [$+0.69$],
       )
     ]
-    #set text(size: 0.75em)
   ],
 )
