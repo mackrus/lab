@@ -30,16 +30,14 @@
 ]
 == Teori
 
-Beräkning av värmeeffekt:
+Beräkning av värmeeffekt och kyleffekt:
 $
-  dot(Q)_"ut" = m_H c_p dot(T)_H
+  dot(Q)_"ut" = m_H c_p dot(T)_H quad #text("och") quad dot(Q)_"in" = -m_C c_p dot(T)_C
 $
 Värme- och kylfaktor ($"COP"$):
 $
-  "COP"_H = dot(Q)_"ut" / P_text("el")
+  "COP"_H = dot(Q)_"ut" / P_text("el") quad #text("och") quad "COP"_C = dot(Q)_"in" / P_text("el")
 $
-// quad #text("och") quad "COP"_C = dot(Q)_"in" / P_text("el")
-// quad #text("och") quad dot(Q)_"in" = -m_C c_p dot(T)_C
 
 == Metod
 === Uppställning
@@ -90,15 +88,34 @@ $ "COP"_H approx T_H / (T_H - T_C) $
 
 == Felanalys
 
-Rimlighet:
-- Värden för COP (bortsett från anomali) varierar mellan 1 och 5 vilket är inom ramen för verkliga maskiner.
-- Ideala värden divergerar vid mycket små temperaturskillnader.
+#grid(
+  columns: (1fr, 1.25fr),
+  gutter: 11pt,
+  [
+    *Systematiska & slumpmässiga fel*
+    - Värmeläckage till/från omgivningen.
+    - Osäkerheter i $P(t)$ pga. OCR/avläsning.
+    - Sensorernas tidsförskjutning.
+    - Mätosäkerheter i temperatur och massa.
+  ],
+  [
+    *Rimlighetsanalys*
+    - Uppmätt $"COP"_H$ (1--5) är rimligt för verkliga maskiner.
+    - Ideala värden divergerar vid små $Delta T$.
+    - Idealt slutet system:
+      $ Delta = "COP"_H - "COP"_C = 1 $
 
-Systematiska fel:
-- Värmeläckage till omgivningen.
-- Tidsförskjutning mellan temperatur och effekt.
-
-Andra fel:
-- Osäkerheter i P(t) pga okulär avläsning av värden + OCR.
-- Mätosäkerheter i temperatur.
-- Mätosäkerheter i massa.
+    #align(center)[
+      #table(
+        columns: (1fr, 1.2fr, 1fr),
+        align: center + horizon,
+        stroke: 0.5pt + luma(150),
+        [*Mätning*], [*$Delta$*], [*Avvikelse*],
+        [Mätning 1], [$1.06$], [$+0.06$],
+        [Mätning 2], [$1.65$], [$+0.65$],
+        [Mätning 3], [$1.69$], [$+0.69$],
+      )
+    ]
+    #set text(size: 0.75em)
+  ],
+)

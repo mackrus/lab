@@ -398,15 +398,98 @@ def main():
         label="Mätserie 3: Ideal",
     )
 
-    plt.title("COP vs Delta T: Uppmätt och idealt", pad=20)
+    plt.title("$COP_H$ vs $Delta T_H$: Uppmätt och idealt", pad=20)
     plt.xlabel("Delta T ($T_H - T_C$) [°C]")
-    plt.ylabel("COP")
+    plt.ylabel("$COP_H$")
     plt.ylim(0, 20)
     plt.legend(ncol=2, fontsize="small")
     plt.tight_layout()
     plt.savefig(IMAGES_DIR / "cop_analysis.png", dpi=300, bbox_inches="tight")
     plt.close()
     print("COP analysis saved to cop_analysis.png")
+
+    # 3. COP Sanity Check (COP_H - COP_C)
+    runs_sanity = [
+        ("Mätning 1", data_run_1, run1_m_h, run1_m_c, t_p1, p_p1, mask1),
+        ("Mätning 2", data_run_2, run23_m_h, run23_m_c, t_p2, p_p2, mask2),
+        ("Mätning 3", data_run_3, run23_m_h, run23_m_c, t_p3, p_p3, mask3),
+    ]
+
+    fig, axes = plt.subplots(3, 1, figsize=(12, 14), sharex=False)
+
+    print("\n--- Thermodynamic Sanity Check (COP_H - COP_C) ---")
+    for i, (name, data, mh, mc, tp, pp, mask) in enumerate(runs_sanity):
+        ax = axes[i]
+
+        data_trimmed = trim_startup(data)
+        t = data_trimmed[:, 0]
+
+        dt, coph, copc, _, _ = calculate_cop(data, mh, mc, tp, pp)
+        delta_sanity = coph - copc
+
+        # Plot COP_H, COP_C, and Delta
+        ax.plot(t, coph, label=r"$\text{COP}_H$", color="#C44E52", lw=2)
+        ax.plot(t, copc, label=r"$\text{COP}_C$", color="#4C72B0", lw=2)
+        ax.plot(
+            t,
+            delta_sanity,
+            label=r"$\Delta_{\text{sanity}} = \text{COP}_H - \text{COP}_C$",
+            color="#55A868",
+            lw=2.5,
+        )
+
+        # Reference line at y=1
+        ax.axhline(
+            1.0, color="gray", linestyle="--", alpha=0.7, label=r"Ideal $\Delta = 1$"
+        )
+
+        valid_mask = mask & ~np.isnan(delta_sanity)
+        if np.any(valid_mask):
+            t_stable = t[valid_mask]
+            ax.axvspan(
+                t_stable[0],
+                t_stable[-1],
+                color="yellow",
+                alpha=0.1,
+                label="Stabil data",
+            )
+
+            mean_ds = np.nanmean(delta_sanity[valid_mask])
+            std_ds = np.nanstd(delta_sanity[valid_mask])
+            deviation = mean_ds - 1.0
+
+            print(f"{name} stable interval: {t_stable[0]:.1f}s to {t_stable[-1]:.1f}s")
+            print(f"  Mean Delta_sanity: {mean_ds:.4f} (std: {std_ds:.4f})")
+            print(f"  Deviation from ideal 1: {deviation:.4f}")
+
+            ax.text(
+                0.05,
+                0.9,
+                rf"Stabil $\Delta$: {mean_ds:.2f} $\pm$ {std_ds:.2f}"
+                + "\n"
+                + rf"Avvikelse: {deviation:+.2f}",
+                transform=ax.transAxes,
+                verticalalignment="top",
+                bbox=dict(
+                    boxstyle="round,pad=0.3",
+                    edgecolor="gray",
+                    facecolor="white",
+                    alpha=0.8,
+                ),
+                fontsize=11,
+            )
+
+        ax.set_title(f"{name}: COP-sanitykontroll över tid", fontsize=14, pad=8)
+        ax.set_ylabel("COP", fontsize=12)
+        ax.set_xlabel("Tid (s)", fontsize=12)
+        ax.legend(loc="upper right", fontsize=10, ncol=2)
+        ax.set_ylim(-1, 11)
+        ax.grid(True, alpha=0.25)
+
+    plt.tight_layout()
+    plt.savefig(IMAGES_DIR / "cop_sanity_check.png", dpi=300, bbox_inches="tight")
+    plt.close()
+    print("COP sanity check plot saved to cop_sanity_check.png")
 
 
 if __name__ == "__main__":
