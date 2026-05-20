@@ -220,7 +220,7 @@ def main():
     run23_m_c = (48.5 - bucket_n) / g
 
     print(
-        "Using constant masses for COP:"
+        "Med konstant massa för COP:"
         f" run1(m_h={run1_m_h:.3f}, m_c={run1_m_c:.3f}) kg,"
         f" run2/3(m_h={run23_m_h:.3f}, m_c={run23_m_c:.3f}) kg"
     )
@@ -231,23 +231,23 @@ def main():
 
     # 1. Temperature Plots (Individual Files)
     runs = [
-        (data_run_1, "Run 1", DATA_DIR / "power_run_1.csv"),
-        (data_run_2, "Run 2", DATA_DIR / "power_run_2.csv"),
-        (data_run_3, "Run 3", DATA_DIR / "power_run_3.csv"),
+        (data_run_1, "Mätning 1", DATA_DIR / "power_run_1.csv"),
+        (data_run_2, "Mätning 2", DATA_DIR / "power_run_2.csv"),
+        (data_run_3, "Mätning 3", DATA_DIR / "power_run_3.csv"),
     ]
 
     # Mapping based on thermodynamics:
     # Hot: T3 (Inlet Gas) > T1 (Reservoir) > T2 (Outlet Liquid)
     # Cold: T2 (Outlet Gas) > T1 (Reservoir) > T3 (Inlet Liquid)
     hot_labels = [
-        "$T_H$ (Reservoir)",
-        "$T_H$ (Outlet Liquid)",
-        "$T_H$ (Inlet Gas)",
+        "$T_H$ (Behållare)",
+        "$T_H$ (Vätska ut)",
+        "$T_H$ (Gas in)",
     ]
     cold_labels = [
-        "$T_C$ (Reservoir)",
-        "$T_C$ (Outlet Gas)",
-        "$T_C$ (Inlet Liquid)",
+        "$T_C$ (Behållare)",
+        "$T_C$ (Gas ut)",
+        "$T_C$ (Vätska in)",
     ]
 
     for i, (data, name, power_path) in enumerate(runs):
@@ -304,12 +304,12 @@ def main():
         )[0]
 
         ax.set_title(
-            f"{name}: Temperature Evolution ($m_H$={mh:.2f}kg, $m_C$={mc:.2f}kg)",
+            f"{name}: Temperatur över tid ($m_H$={mh:.2f}kg, $m_C$={mc:.2f}kg)",
             pad=20,
         )
-        ax.set_ylabel("Temperature (°C)")
-        ax_p.set_ylabel("Power (W)")
-        ax_p.set_xlabel("Time (s)")
+        ax.set_ylabel("Temperatur (°C)")
+        ax_p.set_ylabel("Effekt (W)")
+        ax_p.set_xlabel("Tid (s)")
 
         # Dynamic Y-axis for power to zoom in on the interesting range
         p_min, p_max = np.min(p_power), np.max(p_power)
@@ -363,19 +363,13 @@ def main():
     run_colors = sns.color_palette("viridis", 3)
 
     # Plot Measured with Error Bands
-    plt.plot(
-        dt1[mask1], coph1[mask1], label="Run 1: Measured", color=run_colors[0], lw=2.5
-    )
+    plt.plot(dt1[mask1], coph1[mask1], label="Mätserie 1", color=run_colors[0], lw=2.5)
     # plt.fill_between(dt1[mask1], coph1[mask1] - err1[mask1], coph1[mask1] + err1[mask1], color=run_colors[0], alpha=0.15)
     #
-    plt.plot(
-        dt2[mask2], coph2[mask2], label="Run 2: Measured", color=run_colors[1], lw=2.5
-    )
+    plt.plot(dt2[mask2], coph2[mask2], label="Mätserie 2", color=run_colors[1], lw=2.5)
     # plt.fill_between(dt2[mask2], coph2[mask2] - err2[mask2], coph2[mask2] + err2[mask2], color=run_colors[1], alpha=0.15)
     #
-    plt.plot(
-        dt3[mask3], coph3[mask3], label="Run 3: Measured", color=run_colors[2], lw=2.5
-    )
+    plt.plot(dt3[mask3], coph3[mask3], label="Mätserie 3", color=run_colors[2], lw=2.5)
     # plt.fill_between(dt3[mask3], coph3[mask3] - err3[mask3], coph3[mask3] + err3[mask3], color=run_colors[2], alpha=0.15)
 
     # Plot Ideal (Carnot) for each run
@@ -385,7 +379,7 @@ def main():
         linestyle="--",
         color=run_colors[0],
         alpha=0.5,
-        label="Run 1: Ideal",
+        label="Mätserie 1: Ideal",
     )
     plt.plot(
         dt2[mask2],
@@ -393,7 +387,7 @@ def main():
         linestyle="--",
         color=run_colors[1],
         alpha=0.5,
-        label="Run 2: Ideal",
+        label="Mätserie 2: Ideal",
     )
     plt.plot(
         dt3[mask3],
@@ -401,10 +395,10 @@ def main():
         linestyle="--",
         color=run_colors[2],
         alpha=0.5,
-        label="Run 3: Ideal",
+        label="Mätserie 3: Ideal",
     )
 
-    plt.title("COP vs Delta T: Measured vs Carnot Limit", pad=20)
+    plt.title("COP vs Delta T: Uppmätt och idealt", pad=20)
     plt.xlabel("Delta T ($T_H - T_C$) [°C]")
     plt.ylabel("COP")
     plt.ylim(0, 20)
